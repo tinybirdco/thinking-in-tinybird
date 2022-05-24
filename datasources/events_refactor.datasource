@@ -1,0 +1,15 @@
+DESCRIPTION >
+    __facts__ datasource, where we will store all user generated events
+
+SCHEMA >
+    `company_id` UInt16 `json:$.company_id`,
+    `datetime` DateTime64(3) `json:$.datetime`,
+    `device_OS` LowCardinality(String) `json:$.device.OS`,
+    `device_browser` LowCardinality(String) `json:$.device.browser`,
+    `event` LowCardinality(String) `json:$.event`,
+    `payload_author` String `json:$.payload.author`,
+    `payload_entity_id` String `json:$.payload.entity_id`
+
+ENGINE "MergeTree"
+ENGINE_PARTITION_KEY "toYYYYMM(datetime)"
+ENGINE_SORTING_KEY "company_id, datetime"

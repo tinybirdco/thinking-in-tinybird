@@ -1,0 +1,12 @@
+DESCRIPTION >
+    __dimensions__ datasource, typically smaller and used to enrich events from facts datsource
+
+SCHEMA >
+    `company_id` Int16,
+    `name` String,
+    `size` Int32,
+    `plan` String
+
+ENGINE "MergeTree"
+ENGINE_PARTITION_KEY "substring(toString(company_id), 1, 1)"
+ENGINE_SORTING_KEY "company_id, name, size, plan"
