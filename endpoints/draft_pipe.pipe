@@ -1,0 +1,19 @@
+NODE endpoint
+SQL >
+
+    %
+        SELECT 
+          datetime,
+          name,
+          payload_author,
+          event,
+          payload_entity_id
+        FROM events
+        JOIN companies
+        USING company_id
+        WHERE company_id = {{Int16(company, 3)}}
+        AND datetime 
+          BETWEEN toDateTime64({{String(start_datetime, '2022-05-20 00:00:00', description="initial datetime", required=True)}},3) 
+          AND toDateTime64({{String(end_datetime, '2022-05-20 23:59:59', description="initial datetime", required=True)}},3) 
+        ORDER BY datetime DESC
+
