@@ -10,12 +10,12 @@ SQL >
       event,
       count() number_of_events
     FROM events_refactor
-    JOIN companies
+    JOIN companies_refactor
     USING company_id
     WHERE company_id = {{Int16(company, 3)}}
     AND datetime 
       BETWEEN toDateTime64({{String(start_datetime, '2022-05-23 00:00:00', description="initial datetime", required=True)}},3) 
-      AND toDateTime64({{String(end_datetime, '2022-05-25 23:59:59', description="initial datetime", required=True)}},3) 
+      AND toDateTime64({{String(end_datetime, '2022-05-25 23:59:59', description="final datetime", required=True)}},3) 
   GROUP BY hour, name, event
   ORDER BY hour DESC
 

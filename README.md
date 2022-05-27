@@ -125,74 +125,80 @@ This is our result then:
 +ENGINE_SORTING_KEY "company_id, datetime"
 ```
 
-## Push the changes
+## Push the changes and fill the new data sources
 
 ```bash
 tb push datasources/*_refactor
-tb datasource append events_refactor samples/events_1M.ndjson
-tb datasource append companies_refactor samples/companies.csv
+echo "NODE mat \nSQL >\n\n\tSELECT toUInt16(company_id) company_id, datetime, toLowCardinality(device_OS) device_OS, toLowCardinality(device_browser) device_browser, toLowCardinality(event) event, payload_author, payload_entity_id  FROM events\n\nTYPE materialized\nDATASOURCE events_refactor" > fill_events.pipe
+tb push fill_events.pipe --populate --wait 
+tb pipe rm fill_events --yes
+echo "NODE mat \nSQL >\n\n\tSELECT toUInt16(company_id) company_id, name, size, toLowCardinality(plan) plan FROM companies\n\nTYPE materialized\nDATASOURCE companies_refactor" > fill_companies.pipe
+tb push fill_companies.pipe --populate --wait 
+tb pipe rm fill_companies --yes
 ```
+
+>note this is not the main use of MVs.
 
 ## Pipes
 
-Let's redo the endpoint to test if our changes had any impact. Just addin a second node replacing our original datasources by the refactor ones:
+Let's push a new endpoint to test if our changes had any impact. Just changing _events_ by _events_refactor_ and companies by _companies_refactor_, and call it to check differences in processed data:
 
-```sql
-NODE endpoint
-SQL >
-
-    %
-    SELECT 
-      datetime,
-      name,
-      payload_author,
-      event,
-      payload_entity_id
-    FROM events
-    JOIN companies
-    USING company_id
-    WHERE company_id = {{Int16(company, 1)}}
-    AND datetime 
-      BETWEEN toDateTime64({{String(start_datetime, '2022-05-19 00:00:00', description="initial datetime", required=True)}},3) 
-      AND toDateTime64({{String(end_datetime, '2022-05-19 23:59:59', description="initial datetime", required=True)}},3) 
-    ORDER BY datetime DESC
-
-NODE faster_endpoint
-SQL >
-
-    %
-    SELECT 
-      datetime,
-      name,
-      payload_author,
-      event,
-      payload_entity_id
-    FROM events_refactor
-    JOIN companies_refactor
-    USING company_id
-    WHERE company_id = {{Int16(company, 1)}}
-    AND datetime 
-      BETWEEN toDateTime64({{String(start_datetime, '2022-05-20 00:00:00', description="initial datetime", required=True)}},3) 
-      AND toDateTime64({{String(end_datetime, '2022-05-20 23:59:59', description="initial datetime", required=True)}},3) 
-    ORDER BY datetime DESC
-
+```bash
+tb push pipes/events_per_hour_refactor.pipe
 ```
 
-Let's push to production and let the CLI do some magic for us:
+Seems like we are happy with the difference, so let's edit events_per_hour to query our new datasources:
+
+```diff
+ NODE endpoint
+ SQL >
+ 
+     %
+     SELECT 
+       datetime,
+       name,
+       payload_author,
+       event,
+       payload_entity_id
+-     FROM events
++     FROM events_refactor
+-     JOIN companies
++     JOIN companies_refactor
+     USING company_id
+     WHERE company_id = {{Int16(company, 1)}}
+     AND datetime 
+       BETWEEN toDateTime64({{String(start_datetime, '2022-05-23 00:00:00', description="initial datetime", required=True)}},3) 
+       AND toDateTime64({{String(end_datetime, '2022-05-25 23:59:59', description="final datetime", required=True)}},3) 
+     ORDER BY datetime DESC
+ 
+```
+
+And use the CLI tests to double check results. If you `tb push --force` an endpoint, a battery of regression tests will run. Here is a sample of the output:
+
 ```bash
-(.e) ➜  thinking-in-tinybird git:(refactor-datasources) ✗ tb push pipes/draft_pipe.pipe --force
-** Processing pipes/draft_pipe.pipe
+tb push pipes/events_per_hour.pipe --force
+** Processing pipes/events_per_hour.pipe
 ** Building dependencies
-** Running draft_pipe 
-current https://api.us-east.tinybird.co/v0/pipes/draft_pipe.json?company=1&start_datetime=2022-05-20+00%3A00%3A00&end_datetime=2022-05-20+23%3A59%3A59&q=SELECT+%2A+FROM+_+LIMIT+20&tag=568befa37d273cc14d7c06a4f959ee607cdc0b5f&from=ui&pipe_checker=true
-    new https://api.us-east.tinybird.co/v0/pipes/draft_pipe__checker.json?company=1&start_datetime=2022-05-20+00%3A00%3A00&end_datetime=2022-05-20+23%3A59%3A59&q=SELECT+%2A+FROM+_+LIMIT+20&tag=568befa37d273cc14d7c06a4f959ee607cdc0b5f&from=ui&pipe_checker=true ... ok
+** Running events_per_hour 
+current https://api.us-east.tinybird.co/v0/pipes/events_per_hour.json?company=3&start_datetime=2022-05-23+00%3A00%3A00&end_datetime=2022-05-25+23%3A59%3A59&pipe_checker=true
+    new https://api.us-east.tinybird.co/v0/pipes/events_per_hour__checker.json?company=3&start_datetime=2022-05-23+00%3A00%3A00&end_datetime=2022-05-25+23%3A59%3A59&pipe_checker=true ... ok
+current https://api.us-east.tinybird.co/v0/pipes/events_per_hour.json?company=3&start_datetime=2022-05-23+00%3A00%3A00&end_datetime=2022-05-25+23%3A59%3A59&pipe_checker=true
+    new https://api.us-east.tinybird.co/v0/pipes/events_per_hour__checker.json?company=3&start_datetime=2022-05-23+00%3A00%3A00&end_datetime=2022-05-25+23%3A59%3A59&pipe_checker=true ... ok
+current https://api.us-east.tinybird.co/v0/pipes/events_per_hour.json?company=3&start_datetime=2022-05-23+00%3A00%3A00&end_datetime=2022-05-25+23%3A59%3A59&pipe_checker=true
+    new https://api.us-east.tinybird.co/v0/pipes/events_per_hour__checker.json?company=3&start_datetime=2022-05-23+00%3A00%3A00&end_datetime=2022-05-25+23%3A59%3A59&pipe_checker=true ... ok
+current https://api.us-east.tinybird.co/v0/pipes/events_per_hour.json?company=3&start_datetime=2022-05-23+00%3A00%3A00&end_datetime=2022-05-25+23%3A59%3A59&pipe_checker=true
+    new https://api.us-east.tinybird.co/v0/pipes/events_per_hour__checker.json?company=3&start_datetime=2022-05-23+00%3A00%3A00&end_datetime=2022-05-25+23%3A59%3A59&pipe_checker=true ... ok
+current https://api.us-east.tinybird.co/v0/pipes/events_per_hour.json?company=3&start_datetime=2022-05-23+00%3A00%3A00&end_datetime=2022-05-25+23%3A59%3A59&pipe_checker=true
+    new https://api.us-east.tinybird.co/v0/pipes/events_per_hour__checker.json?company=3&start_datetime=2022-05-23+00%3A00%3A00&end_datetime=2022-05-25+23%3A59%3A59&pipe_checker=true ... ok
+current https://api.us-east.tinybird.co/v0/pipes/events_per_hour.json?company=3&start_datetime=2022-05-23+00%3A00%3A00&end_datetime=2022-05-25+23%3A59%3A59&pipe_checker=true
+    new https://api.us-east.tinybird.co/v0/pipes/events_per_hour__checker.json?company=3&start_datetime=2022-05-23+00%3A00%3A00&end_datetime=2022-05-25+23%3A59%3A59&pipe_checker=true ... ok
 
 ==== Test Metrics ====
 
 ------------------------------------------------------------------------
 | Test Run | Test Passed | Test Failed | % Test Passed | % Test Failed |
 ------------------------------------------------------------------------
-|        1 |           1 |           0 |         100.0 |           0.0 |
+|        6 |           6 |           0 |         100.0 |           0.0 |
 ------------------------------------------------------------------------
 
 ==== Response Time Metrics ====
@@ -200,14 +206,16 @@ current https://api.us-east.tinybird.co/v0/pipes/draft_pipe.json?company=1&start
 -------------------------------------------
 | Timing Metric (s) |  Current |      New |
 -------------------------------------------
-| min               |  0.40552 | 0.394791 |
-| max               |  0.40552 | 0.394791 |
-| mean              | 0.405520 | 0.394791 |
-| median            |  0.40552 | 0.394791 |
-| p90               |  0.40552 | 0.394791 |
+| min               | 0.859984 | 0.676805 |
+| max               | 1.124045 | 0.811588 |
+| mean              | 1.032945 | 0.723708 |
+| median            | 1.065268 | 0.712358 |
+| p90               | 1.124045 | 0.811588 |
 -------------------------------------------
-** => Test endpoint at https://api.us-east.tinybird.co/v0/pipes/draft_pipe.json
-** 'draft_pipe' created
+** Token testing_token found, adding permissions
+** => Test endpoint with:
+** $ curl https://api.us-east.tinybird.co/v0/pipes/events_per_hour.json?token=$TESTING_TOKEN
+** 'events_per_hour' created
 ** Not pushing fixtures
 ```
 
