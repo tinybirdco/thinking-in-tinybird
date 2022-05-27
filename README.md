@@ -10,13 +10,13 @@ Think of the output and adapt the pipes and schema accordingly.
 Rather than applying directly the data model and building the logic based on that,
  ```
 
-data  |-------|      |-------|   api
+*data |-------|      |-------|   api
   ---->| model |----->| logic |---->
        |-------|      |-------|
  ```
  redesign your logic and model based on expected output.
  ```
-data  |-------|      |-------|   api
+data  |-------|      |-------|   api*
   ---->| model |<-----| logic |<----
        |-------|      |-------|
  ```
