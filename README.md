@@ -128,6 +128,10 @@ This is our result then:
 
 ## Push the changes and fill the new data sources
 
+let's push our newle created `*_refactor` data sources and build and delete a couple of pipes that will copy data from the original data sources to the new ones. We do so throug two pipes that materialize the result of the query into a different data source. We are casting the columns to apply the type changes, populating to apply the pipe to the existing data, and then removing these two pipes.
+
+>note this is not the main use of MVs.
+
 ```bash
 tb push datasources/*_refactor
 echo "NODE mat \nSQL >\n\n\tSELECT toUInt16(company_id) company_id, datetime, toLowCardinality(device_OS) device_OS, toLowCardinality(device_browser) device_browser, toLowCardinality(event) event, payload_author, payload_entity_id  FROM events\n\nTYPE materialized\nDATASOURCE events_refactor" > fill_events.pipe
@@ -137,8 +141,6 @@ echo "NODE mat \nSQL >\n\n\tSELECT toUInt16(company_id) company_id, name, size, 
 tb push fill_companies.pipe --populate --wait 
 tb pipe rm fill_companies --yes
 ```
-
->note this is not the main use of MVs.
 
 ## Pipes
 
