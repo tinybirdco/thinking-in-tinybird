@@ -2,7 +2,8 @@
 
 Data project to illustrate how to iterate when building new use cases in tinybird.
 
-first-draft branch: here's the state of the data project in the first iteration, still with no optimizations.
+`main` [branch](https://github.com/tinybirdco/thinking-in-tinybird): explanation of the repo and the process we will be following.  
+`first-draft` [branch](https://github.com/tinybirdco/thinking-in-tinybird/tree/first-draft): here's the state of the data project in the first iteration, still with no optimizations.
 
 ## Refactoring data sources
 
