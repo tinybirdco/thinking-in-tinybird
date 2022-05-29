@@ -45,6 +45,8 @@ Based on the queries you will do and focused on reducing the amount of scanned d
 
 > you can check more details about all things to take into account in the `refactor-datasources` [branch](https://github.com/tinybirdco/thinking-in-tinybird/tree/refactor-datasources) of this repo.
 
-## Extra steps
+## Extra tips
 
-Soemtimes your pipes constantly run an aggregtion that scans many rows, or you need several steps to transform the data model into something useful. If that's the case, check [materialized views](https://www.tinybird.co/guide/materialized-views), a feature that let's you transform data at ingestion time and incrementally refresh the view.
+The join of our pipe is OK because the companies data source only has 5 rows, but for JOINs with larger data sources, using subqueries reduce a lot the memory footprint. See this [example](https://ui.tinybird.co/snapshot/10e0ab7dcb8e4925bc63a3d46a0eebc2) taken from the Typeform [blogpost](https://www.tinybird.co/blog-posts/typeform-utm-realtime-analytics).
+
+Sometimes your pipes constantly run an aggregtion that scans many rows, or you need several steps to transform the data model into something useful. If that's the case, check [materialized views](https://www.tinybird.co/guide/materialized-views), a feature that let's you transform data at ingestion time and incrementally refresh the view.
