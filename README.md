@@ -146,6 +146,9 @@ Let's push a new endpoint to test if our changes had any impact. Just changing _
 ```bash
 tb push pipes/events_per_hour_refactor.pipe
 ```
+After some calls and looking at our dashboard this is the difference when calling the original and refactor datasources:
+![comparing_usage](https://user-images.githubusercontent.com/29075486/170879312-9fb1da0b-d14b-4ef5-841b-c30b076251fa.png)
+
 
 Seems like we are happy with the difference, so let's edit events_per_hour to query our new datasources:
 
@@ -170,7 +173,6 @@ Seems like we are happy with the difference, so let's edit events_per_hour to qu
        BETWEEN toDateTime64({{String(start_datetime, '2022-05-23 00:00:00', description="initial datetime", required=True)}},3) 
        AND toDateTime64({{String(end_datetime, '2022-05-25 23:59:59', description="final datetime", required=True)}},3) 
      ORDER BY datetime DESC
- 
 ```
 
 And use the CLI tests to double check results. If you `tb push --force` an endpoint, a battery of regression tests will run. Here is a sample of the output:
