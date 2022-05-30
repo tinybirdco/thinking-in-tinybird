@@ -128,7 +128,7 @@ This is our result then:
 
 ## Push the changes and fill the new data sources
 
-let's push our newle created `*_refactor` data sources and build and delete a couple of pipes that will copy data from the original data sources to the new ones. We do so throug two pipes that materialize the result of the query into a different data source. We are casting the columns to apply the type changes, populating to apply the pipe to the existing data, and then removing these two pipes.
+It's time to push our newly created `*_refactor` data sources and build and delete a couple of pipes that will copy data from the original data sources to the new ones. We do so throug two pipes that materialize the result of the query into a different data source. We are casting the columns to apply the type changes, populating to apply the pipe to the existing data, and then removing these two pipes.
 
 >note this is not the main use of MVs.
 
