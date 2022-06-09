@@ -2,7 +2,8 @@
 
 Data project to illustrate how to iterate when building new use cases in tinybird.
 
-first-draft branch: here's the state of the data project in the first iteration, still with no optimizations.
+`main` [branch](https://github.com/tinybirdco/thinking-in-tinybird): explanation of the repo and the process we will be following.  
+`first-draft` [branch](https://github.com/tinybirdco/thinking-in-tinybird/tree/first-draft): here's the state of the data project in the first iteration, still with no optimizations.
 
 ## Refactoring data sources
 
@@ -128,6 +129,10 @@ This is our result then:
 
 ## Push the changes and fill the new data sources
 
+It's time to push our newly created `*_refactor` data sources and build and delete a couple of pipes that will copy data from the original data sources to the new ones. We do so throug two pipes that materialize the result of the query into a different data source. We are casting the columns to apply the type changes, populating to apply the pipe to the existing data, and then removing these two pipes.
+
+>note this is not the main use of MVs.
+
 ```bash
 tb push datasources/*_refactor
 echo "NODE mat \nSQL >\n\n\tSELECT toUInt16(company_id) company_id, datetime, toLowCardinality(device_OS) device_OS, toLowCardinality(device_browser) device_browser, toLowCardinality(event) event, payload_author, payload_entity_id  FROM events\n\nTYPE materialized\nDATASOURCE events_refactor" > fill_events.pipe
@@ -138,8 +143,6 @@ tb push fill_companies.pipe --populate --wait
 tb pipe rm fill_companies --yes
 ```
 
->note this is not the main use of MVs.
-
 ## Pipes
 
 Let's push a new endpoint to test if our changes had any impact. Just changing _events_ by _events_refactor_ and companies by _companies_refactor_, and call it to check differences in processed data:
@@ -147,6 +150,9 @@ Let's push a new endpoint to test if our changes had any impact. Just changing _
 ```bash
 tb push pipes/events_per_hour_refactor.pipe
 ```
+After some calls and looking at our dashboard this is the difference when calling the original and refactor datasources:
+![comparing_usage](https://user-images.githubusercontent.com/29075486/170879312-9fb1da0b-d14b-4ef5-841b-c30b076251fa.png)
+
 
 Seems like we are happy with the difference, so let's edit events_per_hour to query our new datasources:
 
@@ -171,7 +177,6 @@ Seems like we are happy with the difference, so let's edit events_per_hour to qu
        BETWEEN toDateTime64({{String(start_datetime, '2022-05-23 00:00:00', description="initial datetime", required=True)}},3) 
        AND toDateTime64({{String(end_datetime, '2022-05-25 23:59:59', description="final datetime", required=True)}},3) 
      ORDER BY datetime DESC
- 
 ```
 
 And use the CLI tests to double check results. If you `tb push --force` an endpoint, a battery of regression tests will run. Here is a sample of the output:
