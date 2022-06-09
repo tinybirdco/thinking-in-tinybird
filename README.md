@@ -63,7 +63,7 @@ Partitions are the way data is stored in the database file system.
 
 - companies:
 
-By default, tinybird created this partition key: `ENGINE_PARTITION_KEY "substring(toString(company_id), 1, 1)"` but looking at the [docs](https://docs.tinybird.co/tips/data-source-tips.html#choosing-the-engine-partition-key), and knowing it is a dimensions table, let's remove it.
+By default, tinybird created this partition key: `ENGINE_PARTITION_KEY "substring(toString(company_id), 1, 1)"` but looking at the [docs](https://docs.tinybird.co/tips/data-source-tips.html#choosing-the-engine-partition-key), and knowing it is a dimensions table, let's leave it blank or with something meaningless, like "tuple()".
 
 - events: 
 
@@ -95,6 +95,7 @@ This is our result then:
 
  ENGINE "MergeTree"
 -ENGINE_PARTITION_KEY "substring(toString(company_id), 1, 1)"
++ENGINE_PARTITION_KEY "tuple()"
 -ENGINE_SORTING_KEY "company_id, name, size, plan"
 +ENGINE_SORTING_KEY "company_id"
 ```

@@ -9,3 +9,5 @@ SCHEMA >
 
 ENGINE "MergeTree"
 ENGINE_SORTING_KEY "company_id"
+ENGINE_PARTITION_KEY "tuple()"
+
