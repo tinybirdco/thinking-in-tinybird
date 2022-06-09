@@ -52,11 +52,9 @@ If you are planning to do queries like: get latest events for all the companies 
 
 Let's leave just company_id then.
 
-
 - events:
 
 We will be filtering by company id, so it muust be our first index. It is also worth noting company_id and datetime order, since it is better to have the columns you are going to filter by exact matches first and the ones you will filter by range (datetime between start and end) later.
-
 
 ### Partition
 
@@ -66,12 +64,13 @@ Partitions are the way data is stored in the database file system.
 
 By default, tinybird created this partition key: `ENGINE_PARTITION_KEY "substring(toString(company_id), 1, 1)"` but looking at the [docs](https://docs.tinybird.co/tips/data-source-tips.html#choosing-the-engine-partition-key), and knowing it is a dimensions table, let's leave it blank or with something meaningless, like "tuple()".
 
-- events: 
+- events:
 
 here we do have the time column mentioned in the docs, we could go for the default `ENGINE_PARTITION_KEY "toYear(datetime)"` or `ENGINE_PARTITION_KEY "toYYYYMM(datetime)"`.
 As we expect lots of data in our datasource, let's go for a monthly based one. See note below for some rules.
 
 Note: some things to take into account when selecting a partition:
+
 - sometimes it's better not to have one. When in doubt, leave it blank, unless your datasource is expected to be >300GB.
 - pay special attention if you will create MVs from the DS and are planning to de replaces. More info [here](https://www.tinybird.co/guide/replacing-and-deleting-data#replace-data-selectively).
 - when ingesting new data you should ideally write to just one partition, and never more than 10.
@@ -150,9 +149,9 @@ Let's push a new endpoint to test if our changes had any impact. Just changing _
 ```bash
 tb push pipes/events_per_hour_refactor.pipe
 ```
+
 After some calls and looking at our dashboard this is the difference when calling the original and refactor datasources:
 ![comparing_usage](https://user-images.githubusercontent.com/29075486/170879312-9fb1da0b-d14b-4ef5-841b-c30b076251fa.png)
-
 
 Seems like we are happy with the difference, so let's edit events_per_hour to query our new datasources:
 
@@ -225,6 +224,6 @@ current https://api.us-east.tinybird.co/v0/pipes/events_per_hour.json?company=3&
 ** Not pushing fixtures
 ```
 
-## Final note:
+## Final note
 
 Trust but verify. These are some improvement proposals that we believe will make this use case faster, but when building your own, do test several approaches, combinations os keys, queries... and, as always, when in doubt, just ask us!
