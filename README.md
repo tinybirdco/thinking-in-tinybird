@@ -45,6 +45,8 @@ Based on the queries you will do and focused on reducing the amount of scanned d
 
 > you can check more details about all things to take into account in the `refactor-datasources` [branch](https://github.com/tinybirdco/thinking-in-tinybird/tree/refactor-datasources) of this repo.
 
+[Sneak peek](https://ui.us-east.tinybird.co/snapshot/b59d6076f9a747f5898a7916c3ce1767) of the improvements
+
 ## Extra tips
 
 The join of our pipe is OK because the companies data source only has 5 rows, but for JOINs with larger data sources, using subqueries reduce a lot the memory footprint. See this [example](https://ui.tinybird.co/snapshot/10e0ab7dcb8e4925bc63a3d46a0eebc2) taken from the Typeform [blogpost](https://www.tinybird.co/blog-posts/typeform-utm-realtime-analytics).
