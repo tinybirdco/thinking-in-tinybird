@@ -86,10 +86,11 @@ This is our result then:
      __dimensions__ datasource, typically smaller and used to enrich events from facts datsource
  
  SCHEMA >
-     `company_id` Int16,
+-    `company_id` Int16,
++    `company_id` UInt16,
      `name` String,
-     `name` LowCardinality(String),
-     `size` Int32,
+-    `size` Int32,
++    `size` UInt32,
 -    `plan` String
 +    `plan` LowCardinality(String)
 
@@ -100,7 +101,7 @@ This is our result then:
 +ENGINE_SORTING_KEY "company_id"
 ```
 
-- events.datasource
+- events_refactor.datasource
 
 ```diff
  DESCRIPTION >
@@ -134,10 +135,10 @@ It's time to push our newly created `*_refactor` data sources and build and dele
 
 ```bash
 tb push datasources/*_refactor
-echo "NODE mat \nSQL >\n\n\tSELECT toUInt16(company_id) company_id, datetime, toLowCardinality(device_OS) device_OS, toLowCardinality(device_browser) device_browser, toLowCardinality(event) event, payload_author, payload_entity_id  FROM events\n\nTYPE materialized\nDATASOURCE events_refactor" > fill_events.pipe
+echo "NODE mat \nSQL >\n\n\tSELECT toUInt16(company_id) company_id, datetime, toLowCardinality(device_OS) device_OS, toLowCardinality(device_browser) device_browser, toLowCardinality(event) event, payload_author, payload_entity_id FROM events\n\nTYPE materialized\nDATASOURCE events_refactor" > fill_events.pipe
 tb push fill_events.pipe --populate --wait 
 tb pipe rm fill_events --yes
-echo "NODE mat \nSQL >\n\n\tSELECT toUInt16(company_id) company_id, name, size, toLowCardinality(plan) plan FROM companies\n\nTYPE materialized\nDATASOURCE companies_refactor" > fill_companies.pipe
+echo "NODE mat \nSQL >\n\n\tSELECT toUInt16(company_id) company_id, name, toUInt32(size) size, toLowCardinality(plan) plan FROM companies\n\nTYPE materialized\nDATASOURCE companies_refactor" > fill_companies.pipe
 tb push fill_companies.pipe --populate --wait 
 tb pipe rm fill_companies --yes
 ```
@@ -161,21 +162,22 @@ Seems like we are happy with the difference, so let's edit events_per_hour to qu
  
      %
      SELECT 
-       datetime,
+       toStartOfHour(datetime) hour,
        name,
-       payload_author,
        event,
-       payload_entity_id
+       count() number_of_events
 -     FROM events
 +     FROM events_refactor
 -     JOIN companies
 +     JOIN companies_refactor
      USING company_id
-     WHERE company_id = {{Int16(company, 1)}}
+-    WHERE company_id = {{Int16(company, 3)}}
++    WHERE company_id = {{UInt16(company, 3)}}
      AND datetime 
        BETWEEN toDateTime64({{String(start_datetime, '2022-05-23 00:00:00', description="initial datetime", required=True)}},3) 
        AND toDateTime64({{String(end_datetime, '2022-05-25 23:59:59', description="final datetime", required=True)}},3) 
-     ORDER BY datetime DESC
+     GROUP BY hour, name, event
+     ORDER BY hour DESC
 ```
 
 And use the CLI tests to double check results. If you `tb push --force` an endpoint, a battery of regression tests will run. Here is a sample of the output:
