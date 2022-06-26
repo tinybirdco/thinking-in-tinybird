@@ -8,6 +8,6 @@ SCHEMA >
     `plan` LowCardinality(String)
 
 ENGINE "MergeTree"
-ENGINE_SORTING_KEY "company_id"
 ENGINE_PARTITION_KEY "tuple()"
+ENGINE_SORTING_KEY "company_id"
 
