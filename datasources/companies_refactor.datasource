@@ -1,5 +1,5 @@
 DESCRIPTION >
-    __dimensions__ datasource, typically smaller and used to enrich events from facts datsource
+    __dimensions__ datasource, typically smaller and used to enrich events from facts datasource
 
 SCHEMA >
     `company_id` UInt16,
