@@ -11,4 +11,5 @@ SCHEMA >
     `payload_entity_id` String `json:$.payload.entity_id`
 
 ENGINE "MergeTree"
+ENGINE_PARTITION_KEY "toYear(datetime)"
 ENGINE_SORTING_KEY "datetime, event, payload_author, payload_entity_id"

@@ -1,5 +1,5 @@
 DESCRIPTION >
-    __dimensions__ datasource, typically smaller and used to enrich events from facts datsource
+    __dimensions__ datasource, typically smaller and used to enrich events from facts datasource
 
 SCHEMA >
     `company_id` UInt16,
@@ -8,6 +8,6 @@ SCHEMA >
     `plan` LowCardinality(String)
 
 ENGINE "MergeTree"
-ENGINE_SORTING_KEY "company_id"
 ENGINE_PARTITION_KEY "tuple()"
+ENGINE_SORTING_KEY "company_id"
 

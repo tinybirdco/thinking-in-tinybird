@@ -15,7 +15,7 @@ Authenticate and download the data project:
 tb auth -i
 ```
 
-choose your region and paste your token. Then create the folder structure and downlad the project from your workspace.
+Choose your region and paste your token. Then create the folder structure and downlad the project from your workspace.
 
 ```bash
 tb init
@@ -39,7 +39,7 @@ We are not planning on adding millions of plans, so replacing String by LowCardi
 Same reasoning for company_id, so `UInt16`.
 LowCardinality(String) for event, OS, and browser.
 
-note: we didn't have any nullable column here, but they are also good candidates to avoid, for example setting '' or 0 as the alternative for null.
+Note: we didn't have any nullable column here, but they are also good candidates to avoid, for example setting '' or 0 as the alternative for null.
 
 ### Sorting keys
 
@@ -54,7 +54,7 @@ Let's leave just company_id then.
 
 - events:
 
-We will be filtering by company id, so it muust be our first index. It is also worth noting company_id and datetime order, since it is better to have the columns you are going to filter by exact matches first and the ones you will filter by range (datetime between start and end) later.
+We will be filtering by company id, so it must be our first index. It is also worth noting company_id and datetime order, since it is better to have the columns you are going to filter by exact matches first and the ones you will filter by range (datetime between start and end) later.
 
 ### Partition
 
@@ -66,14 +66,14 @@ By default, tinybird created this partition key: `ENGINE_PARTITION_KEY "substrin
 
 - events:
 
-here we do have the time column mentioned in the docs, we could go for the default `ENGINE_PARTITION_KEY "toYear(datetime)"` or `ENGINE_PARTITION_KEY "toYYYYMM(datetime)"`.
+Here we do have the time column mentioned in the docs, we could go for the default `ENGINE_PARTITION_KEY "toYear(datetime)"` or `ENGINE_PARTITION_KEY "toYYYYMM(datetime)"`.
 As we expect lots of data in our datasource, let's go for a monthly based one. See note below for some rules.
 
 Note: some things to take into account when selecting a partition:
 
-- sometimes it's better not to have one. When in doubt, leave it blank, unless your datasource is expected to be >300GB.
-- pay special attention if you will create MVs from the DS and are planning to de replaces. More info [here](https://www.tinybird.co/guide/replacing-and-deleting-data#replace-data-selectively).
-- when ingesting new data you should ideally write to just one partition, and never more than 10.
+- Sometimes it's better not to have one. When in doubt, leave it blank, unless your datasource is expected to be >300GB.
+- Pay special attention if you will create MVs from the DS and are planning to de replaces. More info [here](https://www.tinybird.co/guide/replacing-and-deleting-data#replace-data-selectively).
+- When ingesting new data you should ideally write to just one partition, and never more than 10.
 
 ### Refactored schemas
 
@@ -83,13 +83,14 @@ This is our result then:
 
 ```diff
  DESCRIPTION >
-     __dimensions__ datasource, typically smaller and used to enrich events from facts datsource
+     __dimensions__ datasource, typically smaller and used to enrich events from facts datasource
  
  SCHEMA >
-     `company_id` Int16,
+-    `company_id` Int16,
++    `company_id` UInt16,
      `name` String,
-     `name` LowCardinality(String),
-     `size` Int32,
+-    `size` Int32,
++    `size` UInt32,
 -    `plan` String
 +    `plan` LowCardinality(String)
 
@@ -100,7 +101,7 @@ This is our result then:
 +ENGINE_SORTING_KEY "company_id"
 ```
 
-- events.datasource
+- events_refactor.datasource
 
 ```diff
  DESCRIPTION >
@@ -128,23 +129,23 @@ This is our result then:
 
 ## Push the changes and fill the new data sources
 
-It's time to push our newly created `*_refactor` data sources and build and delete a couple of pipes that will copy data from the original data sources to the new ones. We do so throug two pipes that materialize the result of the query into a different data source. We are casting the columns to apply the type changes, populating to apply the pipe to the existing data, and then removing these two pipes.
+It's time to push our newly created `*_refactor` data sources and build and delete a couple of pipes that will copy data from the original data sources to the new ones. We do so through two pipes that materialize the result of the query into a different data source. We are casting the columns to apply the type changes, populating to apply the pipe to the existing data, and then removing these two pipes.
 
->note this is not the main use of MVs.
+>Note this is not the main use of MVs.
 
 ```bash
 tb push datasources/*_refactor
-echo "NODE mat \nSQL >\n\n\tSELECT toUInt16(company_id) company_id, datetime, toLowCardinality(device_OS) device_OS, toLowCardinality(device_browser) device_browser, toLowCardinality(event) event, payload_author, payload_entity_id  FROM events\n\nTYPE materialized\nDATASOURCE events_refactor" > fill_events.pipe
+echo "NODE mat \nSQL >\n\n\tSELECT toUInt16(company_id) company_id, datetime, toLowCardinality(device_OS) device_OS, toLowCardinality(device_browser) device_browser, toLowCardinality(event) event, payload_author, payload_entity_id FROM events\n\nTYPE materialized\nDATASOURCE events_refactor" > fill_events.pipe
 tb push fill_events.pipe --populate --wait 
 tb pipe rm fill_events --yes
-echo "NODE mat \nSQL >\n\n\tSELECT toUInt16(company_id) company_id, name, size, toLowCardinality(plan) plan FROM companies\n\nTYPE materialized\nDATASOURCE companies_refactor" > fill_companies.pipe
+echo "NODE mat \nSQL >\n\n\tSELECT toUInt16(company_id) company_id, name, toUInt32(size) size, toLowCardinality(plan) plan FROM companies\n\nTYPE materialized\nDATASOURCE companies_refactor" > fill_companies.pipe
 tb push fill_companies.pipe --populate --wait 
 tb pipe rm fill_companies --yes
 ```
 
 ## Pipes
 
-Let's push a new endpoint to test if our changes had any impact. Just changing _events_ by _events_refactor_ and companies by _companies_refactor_, and call it to check differences in processed data:
+Let's push a new endpoint to test if our changes had any impact. Just changing _events_ by _events_refactor_ and _companies_ by _companies_refactor_, and call it to check differences in processed data:
 
 ```bash
 tb push pipes/events_per_hour_refactor.pipe
@@ -161,21 +162,22 @@ Seems like we are happy with the difference, so let's edit events_per_hour to qu
  
      %
      SELECT 
-       datetime,
+       toStartOfHour(datetime) hour,
        name,
-       payload_author,
        event,
-       payload_entity_id
+       count() number_of_events
 -     FROM events
 +     FROM events_refactor
 -     JOIN companies
 +     JOIN companies_refactor
      USING company_id
-     WHERE company_id = {{Int16(company, 1)}}
+-    WHERE company_id = {{Int16(company, 3)}}
++    WHERE company_id = {{UInt16(company, 3)}}
      AND datetime 
        BETWEEN toDateTime64({{String(start_datetime, '2022-05-23 00:00:00', description="initial datetime", required=True)}},3) 
        AND toDateTime64({{String(end_datetime, '2022-05-25 23:59:59', description="final datetime", required=True)}},3) 
-     ORDER BY datetime DESC
+     GROUP BY hour, name, event
+     ORDER BY hour DESC
 ```
 
 And use the CLI tests to double check results. If you `tb push --force` an endpoint, a battery of regression tests will run. Here is a sample of the output:
